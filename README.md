@@ -108,17 +108,26 @@ Results are saved to `results.json`:
 
 ```json
 {
-  "page": { "size": "A4", "margin_mm": 20 },
-  "markers": { "size_mm": 15, "pad_mm": 5 },
-  "text_box": { "width": 60, "height": 8 },
-  "layout": { "row_spacing_mm": 12, "bubble_diameter_mm": 6, "option_spacing_mm": 12 },
+  "page": { "size": "A4", "margin_mm": 25 },
+  "defaults": {
+    "marker_size_mm": 15, "marker_pad_mm": 5,
+    "text_box_width_mm": 60, "text_box_height_mm": 8,
+    "row_spacing_mm": 6, "label_spacing_mm": 12,
+    "bubble_diameter_mm": 6, "option_spacing_mm": 12
+  },
   "questions": [
-    { "type": "text",   "id": "date", "label": "Date" },
+    { "type": "date",   "id": "date", "label": "Date" },
+    { "type": "text",   "id": "name", "label": "Name", "text_box_width_mm": 120 },
+    { "type": "number", "id": "age",  "label": "Age",  "text_box_width_mm": 30 },
     { "type": "choice", "id": "q1",   "label": "Question 1", "options": ["A", "B", "C", "D"] },
-    { "type": "choice", "id": "sat",  "label": "Satisfaction", "options": ["1","2","3","4","5","6","7","8","9","10"] }
+    { "type": "choice", "id": "sat",  "label": "Satisfaction",
+      "options": ["1","2","3","4","5","6","7","8","9","10"],
+      "bubble_diameter_mm": 5, "option_spacing_mm": 10 }
   ]
 }
 ```
+
+Any key from `defaults` can be overridden on an individual question by adding it directly to the question object.
 
 **Question types:**
 - `text` — freehand text box; returns raw OCR string
@@ -131,16 +140,16 @@ Results are saved to `results.json`:
 ```json
 {
   "upscaling_scale": 3,
-  "omr_pixel_threshold": 150,
-  "omr_fill_threshold": 0.25
+  "bubble_pixel_threshold": 150,
+  "bubble_fill_threshold": 0.25
 }
 ```
 
 | Parameter | Description |
 |---|---|
 | `upscaling_scale` | Output pixels per ReportLab point (~216 DPI at 3) |
-| `omr_pixel_threshold` | Grayscale cutoff for counting dark pixels (0–255) |
-| `omr_fill_threshold` | Minimum dark-pixel ratio to count a bubble as marked |
+| `bubble_pixel_threshold` | Grayscale cutoff for counting dark pixels (0–255) |
+| `bubble_fill_threshold` | Minimum dark-pixel ratio to count a bubble as marked |
 
 ---
 

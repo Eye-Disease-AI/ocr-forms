@@ -5,39 +5,38 @@ from reportlab.pdfgen import canvas as pdf_canvas
 from reportlab.lib.utils import ImageReader
 from .common import *
 
+_QUESTION_STRUCTURAL_KEYS = {"type", "id", "label", "options"}
+
+
 def _marker_image_reader(marker_id: int):
     img = cv2.aruco.generateImageMarker(ARUCO_DICT, marker_id, 200)
-    buf = io.BytesIO()
-    Image.fromarray(img).save(buf, format='PNG')
-    buf.seek(0)
-    return ImageReader(buf)
+    buffer = io.BytesIO()
+    Image.fromarray(img).save(buffer, format='PNG')
+    buffer.seek(0)
+    return ImageReader(buffer)
+
 
 class FormRenderer:
     def __init__(self, form_config: dict):
-        self.cfg = form_config
-        self.markers_config = {**MARKER_DEFAULTS, **form_config.get("markers", {})}
-        self.text_box_config = {**TEXT_BOX_DEFAULTS, **form_config.get("text_box", {})}
-        self.width, self.height = PAGE_SIZES[self.cfg["page"]["size"]]
-
-        self.margin = self.cfg["page"]["margin_mm"] * units.mm
-        self.row_spacing = self.cfg["layout"]["row_spacing_mm"] * units.mm
-        self.label_spacing = self.cfg["layout"]["label_spacing_mm"] * units.mm
-        self.bubble_diameter = self.cfg["layout"]["bubble_diameter_mm"] * units.mm
-        self.option_spacing = self.cfg["layout"]["option_spacing_mm"] * units.mm
-
-        self.marker_size = self.markers_config["size_mm"] * units.mm
-        self.marker_pad  = self.markers_config["pad_mm"] * units.mm
+        self.config = form_config
+        self.defaults = {**DEFAULTS, **form_config.get("defaults", {})}
+        self.width, self.height = PAGE_SIZES[self.config["page"]["size"]]
+        self.margin = self.config["page"]["margin_mm"] * units.mm
         self.canvas = None
+
+    def _question_style(self, question: dict) -> dict:
+        overrides = {k: v for k, v in question.items() if k not in _QUESTION_STRUCTURAL_KEYS}
+        return {**self.defaults, **overrides}
 
     def render(self):
         self.canvas = io.BytesIO() if self.canvas is None else self.canvas
         self._render_to_canvas(self.canvas)
-    
+
     def save_pdf(self, output: str):
         if self.canvas is None:
             self.render()
-        with open(output, 'wb') as f:
-            f.write(self.canvas.getvalue())
+        with open(output, 'wb') as file:
+            file.write(self.canvas.getvalue())
 
     def save_png(self, output: str, dpi: int=150):
         if self.canvas is None:
@@ -45,35 +44,38 @@ class FormRenderer:
         pages = convert_from_bytes(self.canvas.getvalue(), dpi=dpi)
         pages[0].save(output, 'PNG')
 
-    def _render_to_canvas(self, dest: IO[bytes]):
+    def _render_to_canvas(self, dest):
         canvas = pdf_canvas.Canvas(dest, pagesize=(self.width, self.height))
         self._draw_markers_on_canvas(canvas)
 
         y = self.height - self.margin
 
-        for q in self.cfg["questions"]:
-            canvas.drawString(self.margin, y, q["label"])
-            y -= self.label_spacing
-            if q["type"] in ("text", "date", "number"):
-                canvas.rect(self.margin, y, self.text_box_config["width"]*units.mm, self.text_box_config["height"]*units.mm)
-            if q["type"] == "choice":
+        for question in self.config["questions"]:
+            style = self._question_style(question)
+            canvas.drawString(self.margin, y, question["label"])
+            y -= style["label_spacing_mm"] * units.mm
+            if question["type"] in ("text", "date", "number"):
+                canvas.rect(self.margin, y,
+                            style["text_box_width_mm"] * units.mm,
+                            style["text_box_height_mm"] * units.mm)
+            if question["type"] == "choice":
                 x = self.margin
-                for opt in q["options"]:
-                    r = self.bubble_diameter / 2
-                    canvas.circle(x + r, y, r)
-                    canvas.drawString(x + self.bubble_diameter + 2*units.mm, y-2, opt)
-                    x += self.option_spacing
-            y -= self.row_spacing * 2
+                radius = style["bubble_diameter_mm"] * units.mm / 2
+                for option in question["options"]:
+                    canvas.circle(x + radius, y, radius)
+                    canvas.drawString(x + style["bubble_diameter_mm"] * units.mm + 2*units.mm, y-2, option)
+                    x += style["option_spacing_mm"] * units.mm
+            y -= style["row_spacing_mm"] * units.mm * 2
         canvas.save()
 
     def _draw_markers_on_canvas(self, canvas):
-        size = self.marker_size
-        pad = self.marker_pad
-        W, H = self.width, self.height
+        size = self.defaults["marker_size_mm"] * units.mm
+        pad  = self.defaults["marker_pad_mm"] * units.mm
+        width, height = self.width, self.height
         for marker_id, (x, y) in {
-            0: (pad,          H - pad - size),  # top left
-            1: (W - pad - size, H - pad - size),  # top right
-            2: (pad,          pad),               # bottom left
-            3: (W - pad - size, pad),              # bottom right
+            0: (pad,             height - pad - size),  # top left
+            1: (width - pad - size, height - pad - size),  # top right
+            2: (pad,             pad),                   # bottom left
+            3: (width - pad - size, pad),                # bottom right
         }.items():
             canvas.drawImage(_marker_image_reader(marker_id), x, y, width=size, height=size)
