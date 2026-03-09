@@ -1,7 +1,8 @@
 {
   "page": {
     "size": "A4",
-    "margin_mm": 25,
+    "margin_x_mm": 25,
+    "margin_y_mm": 25,
     "font": "/usr/share/fonts/TTF/DejaVuSans.ttf",
     "font_size": 11
   },

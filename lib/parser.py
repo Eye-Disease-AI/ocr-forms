@@ -7,7 +7,8 @@ class FormParser:
         self.config = config
         self.defaults = {**DEFAULTS, **config.get("defaults", {})}
         self.width, self.height = PAGE_SIZES[config["page"]["size"]]
-        self.margin = config["page"]["margin_mm"] * units.mm
+        self.margin_x = config["page"]["margin_x_mm"] * units.mm
+        self.margin_y = config["page"]["margin_y_mm"] * units.mm
         self.font, _, self.font_size = resolve_font(config["page"])
 
     def _question_style(self, question: dict) -> dict:
@@ -16,7 +17,7 @@ class FormParser:
 
     def compute_field_coordinates(self):
         fields = []
-        y = self.height - self.margin
+        y = self.height - self.margin_y
         for question in self.config["questions"]:
             style = self._question_style(question)
             y -= style["label_spacing_mm"] * units.mm
@@ -27,9 +28,9 @@ class FormParser:
                     "type": "text",
                     "parse": question["type"],
                     "bbox": (
-                        self.margin,
+                        self.margin_x,
                         y,
-                        self.margin + style["text_box_width_mm"] * units.mm,
+                        self.margin_x + style["text_box_width_mm"] * units.mm,
                         y + style["text_box_height_mm"] * units.mm
                     )
                 })
@@ -40,15 +41,15 @@ class FormParser:
                 if question.get("direction", "horizontal") == "vertical":
                     for i, option in enumerate(question["options"]):
                         options[option] = (
-                            self.margin,
+                            self.margin_x,
                             y - diameter / 2,
-                            self.margin + diameter,
+                            self.margin_x + diameter,
                             y + diameter / 2
                         )
                         if i < len(question["options"]) - 1:
                             y -= style["option_spacing_mm"] * units.mm
                 else:
-                    x = self.margin
+                    x = self.margin_x
                     for option in question["options"]:
                         options[option] = (
                             x,

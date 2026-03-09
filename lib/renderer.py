@@ -20,7 +20,8 @@ class FormRenderer:
         self.config = form_config
         self.defaults = {**DEFAULTS, **form_config.get("defaults", {})}
         self.width, self.height = PAGE_SIZES[self.config["page"]["size"]]
-        self.margin = self.config["page"]["margin_mm"] * units.mm
+        self.margin_x = self.config["page"]["margin_x_mm"] * units.mm
+        self.margin_y = self.config["page"]["margin_y_mm"] * units.mm
         self.font, self.bold_font, self.font_size = resolve_font(self.config["page"])
 
         self.canvas = None
@@ -50,28 +51,28 @@ class FormRenderer:
         canvas.setFont(self.font, self.font_size)
         self._draw_markers_on_canvas(canvas)
 
-        y = self.height - self.margin
+        y = self.height - self.margin_y
 
         for question in self.config["questions"]:
             style = self._question_style(question)
             canvas.setFont(self.bold_font, self.font_size)
-            canvas.drawString(self.margin, y, question["label"])
+            canvas.drawString(self.margin_x, y, question["label"])
             canvas.setFont(self.font, self.font_size)
             y -= style["label_spacing_mm"] * units.mm
             if question["type"] in ("text", "date", "number"):
-                canvas.rect(self.margin, y,
+                canvas.rect(self.margin_x, y,
                             style["text_box_width_mm"] * units.mm,
                             style["text_box_height_mm"] * units.mm)
             if question["type"] == "choice":
                 radius = style["bubble_diameter_mm"] * units.mm / 2
                 if question.get("direction", "horizontal") == "vertical":
                     for i, option in enumerate(question["options"]):
-                        canvas.circle(self.margin + radius, y, radius)
-                        canvas.drawString(self.margin + style["bubble_diameter_mm"] * units.mm + 2*units.mm, y-2, option)
+                        canvas.circle(self.margin_x + radius, y, radius)
+                        canvas.drawString(self.margin_x + style["bubble_diameter_mm"] * units.mm + 2*units.mm, y-2, option)
                         if i < len(question["options"]) - 1:
                             y -= style["option_spacing_mm"] * units.mm
                 else:
-                    x = self.margin
+                    x = self.margin_x
                     for option in question["options"]:
                         canvas.circle(x + radius, y, radius)
                         canvas.drawString(x + style["bubble_diameter_mm"] * units.mm + 2*units.mm, y-2, option)
