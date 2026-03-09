@@ -24,17 +24,17 @@ def _warp_image(image: np.ndarray, parser: FormParser, page_width, page_height, 
 
     src = {}
     if ids is not None:
-        for i, mid in enumerate(ids.flatten()):
-            if int(mid) in (0, 1, 2, 3):
-                src[int(mid)] = corners[i][0].mean(axis=0)
+        for i, mark_id in enumerate(ids.flatten()):
+            if int(mark_id) in range(4):
+                src[int(mark_id)] = corners[i][0].mean(axis=0)
 
     if len(src) < 4:
-        print(f"Warning: only {len(src)}/4 markers detected",
-              file=sys.stderr)
+        raise Exception(f"Error: only {len(src)}/4 markers detected.")
+        
 
     dst = parser.marker_coordinates(upscaling_scale)
-    src_pts = np.float32([src[i] for i in [0, 1, 2, 3]])
-    dst_pts = np.float32([dst[i] for i in [0, 1, 2, 3]])
+    src_pts = np.float32([src[i] for i in range(4)])
+    dst_pts = np.float32([dst[i] for i in range(4)])
 
     M = cv2.getPerspectiveTransform(src_pts, dst_pts)
     return cv2.warpPerspective(image, M, (W_px, H_px))

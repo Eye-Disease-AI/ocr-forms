@@ -19,6 +19,10 @@ debug_dir = os.path.join("debug", stem)
 os.makedirs(debug_dir, exist_ok=True)
 
 img = cv2.imread(IMAGE)
+try:
+    results = FormScanner(cfg, scan_cfg).scan(img, debug_logs_dir=debug_dir)
+    print(json.dumps(results, indent=2))
+except Exception as e:
+    print(f"Failure scanning {IMAGE}: {e}")
+    exit(1)
 
-results = FormScanner(cfg, scan_cfg).scan(img, debug_logs_dir=debug_dir)
-print(json.dumps(results, indent=2))

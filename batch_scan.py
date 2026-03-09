@@ -25,29 +25,31 @@ all_results = {}
 
 for filename in sorted(os.listdir(SCANS_DIR)):
     stem, ext = os.path.splitext(filename)
-    ext = ext.lower()
     path = os.path.join(SCANS_DIR, filename)
 
     if ext in IMAGE_EXTS:
         img = cv2.imread(path)
-        frames = [cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)]
-        keys = [stem]
+        frames = [img]
+        keys = [filename]
 
     elif ext in PDF_EXTS:
         pages = convert_from_path(path)
-        frames = [cv2.cvtColor(np.array(p), cv2.COLOR_RGB2GRAY) for p in pages]
-        keys = [f"{stem}_p{i+1}" if len(pages) > 1 else stem for i in range(len(pages))]
+        frames = [np.array(p) for p in pages]
+        keys = [f"{filename}_page{i+1}" if len(pages) > 1 else filename for i in range(len(pages))]
 
     else:
         continue
 
-    for key, gray in zip(keys, frames):
+    for key, img in zip(keys, frames):
         print(f"Scanning {key} ...", file=sys.stderr)
         debug_dir = os.path.join("debug", key)
         os.makedirs(debug_dir, exist_ok=True)
-        all_results[key] = scanner.scan(gray, debug_logs_dir=debug_dir)
+        try:
+            all_results[key] = scanner.scan(img, debug_logs_dir=debug_dir)
+        except Exception as e:
+            print(f"Failure scanning {key}: {e}")
 
 with open(OUTPUT, "w") as f:
     json.dump(all_results, f, indent=2)
 
-print(f"Processed {len(all_results)} form(s) → {OUTPUT}")
+print(f"Processed {len(all_results)} form(s) - {OUTPUT}")
