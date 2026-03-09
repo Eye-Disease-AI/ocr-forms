@@ -8,6 +8,7 @@ class FormParser:
         self.defaults = {**DEFAULTS, **config.get("defaults", {})}
         self.width, self.height = PAGE_SIZES[config["page"]["size"]]
         self.margin = config["page"]["margin_mm"] * units.mm
+        self.font, self.font_size = resolve_font(config["page"])
 
     def _question_style(self, question: dict) -> dict:
         overrides = {k: v for k, v in question.items() if k not in QUESTION_STRUCTURAL_KEYS}
@@ -55,7 +56,9 @@ class FormParser:
                             x + diameter,
                             y + diameter / 2
                         )
-                        x += style["option_spacing_mm"] * units.mm
+                        x += horizontal_option_spacing(option, diameter,
+                                                       style["option_spacing_mm"] * units.mm,
+                                                       self.font, self.font_size)
                     y -= style["row_spacing_mm"] * units.mm * 2
 
                 fields.append({

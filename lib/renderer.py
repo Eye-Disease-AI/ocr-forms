@@ -1,9 +1,6 @@
 import io
-import os
 from pdf2image import convert_from_bytes
 from PIL import Image
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas as pdf_canvas
 from reportlab.lib.utils import ImageReader
 from .common import *
@@ -24,14 +21,7 @@ class FormRenderer:
         self.defaults = {**DEFAULTS, **form_config.get("defaults", {})}
         self.width, self.height = PAGE_SIZES[self.config["page"]["size"]]
         self.margin = self.config["page"]["margin_mm"] * units.mm
-        self.font_size = self.config["page"].get("font_size", 11)
-
-        font_setting = self.config["page"].get("font", "Helvetica")
-        if os.path.isfile(font_setting):
-            pdfmetrics.registerFont(TTFont("FormFont", font_setting))
-            self.font = "FormFont"
-        else:
-            self.font = font_setting
+        self.font, self.font_size = resolve_font(self.config["page"])
 
         self.canvas = None
 
@@ -83,7 +73,9 @@ class FormRenderer:
                     for option in question["options"]:
                         canvas.circle(x + radius, y, radius)
                         canvas.drawString(x + style["bubble_diameter_mm"] * units.mm + 2*units.mm, y-2, option)
-                        x += style["option_spacing_mm"] * units.mm
+                        x += horizontal_option_spacing(option, style["bubble_diameter_mm"] * units.mm,
+                                                       style["option_spacing_mm"] * units.mm,
+                                                       self.font, self.font_size)
                     y -= style["row_spacing_mm"] * units.mm * 2
                 continue
             y -= style["row_spacing_mm"] * units.mm * 2
