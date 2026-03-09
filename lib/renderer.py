@@ -8,7 +8,6 @@ from reportlab.pdfgen import canvas as pdf_canvas
 from reportlab.lib.utils import ImageReader
 from .common import *
 
-_QUESTION_STRUCTURAL_KEYS = {"type", "id", "label", "options"}
 
 
 def _marker_image_reader(marker_id: int):
@@ -37,7 +36,7 @@ class FormRenderer:
         self.canvas = None
 
     def _question_style(self, question: dict) -> dict:
-        overrides = {k: v for k, v in question.items() if k not in _QUESTION_STRUCTURAL_KEYS}
+        overrides = {k: v for k, v in question.items() if k not in QUESTION_STRUCTURAL_KEYS}
         return {**self.defaults, **overrides}
 
     def render(self):
@@ -72,12 +71,21 @@ class FormRenderer:
                             style["text_box_width_mm"] * units.mm,
                             style["text_box_height_mm"] * units.mm)
             if question["type"] == "choice":
-                x = self.margin
                 radius = style["bubble_diameter_mm"] * units.mm / 2
-                for option in question["options"]:
-                    canvas.circle(x + radius, y, radius)
-                    canvas.drawString(x + style["bubble_diameter_mm"] * units.mm + 2*units.mm, y-2, option)
-                    x += style["option_spacing_mm"] * units.mm
+                if question.get("direction", "horizontal") == "vertical":
+                    for option in question["options"]:
+                        canvas.circle(self.margin + radius, y, radius)
+                        canvas.drawString(self.margin + style["bubble_diameter_mm"] * units.mm + 2*units.mm, y-2, option)
+                        y -= style["option_spacing_mm"] * units.mm
+                    y -= style["row_spacing_mm"] * units.mm
+                else:
+                    x = self.margin
+                    for option in question["options"]:
+                        canvas.circle(x + radius, y, radius)
+                        canvas.drawString(x + style["bubble_diameter_mm"] * units.mm + 2*units.mm, y-2, option)
+                        x += style["option_spacing_mm"] * units.mm
+                    y -= style["row_spacing_mm"] * units.mm * 2
+                continue
             y -= style["row_spacing_mm"] * units.mm * 2
         canvas.save()
 

@@ -12,7 +12,7 @@
     "text_box_height_mm": 8,
     "row_spacing_mm": 6,
     "label_spacing_mm": 12,
-    "bubble_diameter_mm": 12,
+    "bubble_diameter_mm": 6,
     "option_spacing_mm": 24
   },
   "questions": [
@@ -41,10 +41,18 @@
     },
     {
       "type": "choice",
+      "id": "q2",
+      "label": "Question 2 (vertical)",
+      "options": ["Option one", "Option two", "Option three"],
+      "direction": "vertical",
+      "bubble_diameter_mm": 10,
+      "option_spacing_mm": 11
+    },
+    {
+      "type": "choice",
       "id": "satisfaction",
       "label": "Satisfaction",
       "options": ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"],
-      "bubble_diameter_mm": 5,
       "option_spacing_mm": 11
     }
   ]

@@ -1,6 +1,5 @@
 from lib.common import *
 
-_QUESTION_STRUCTURAL_KEYS = {"type", "id", "label", "options"}
 
 
 class FormParser:
@@ -11,7 +10,7 @@ class FormParser:
         self.margin = config["page"]["margin_mm"] * units.mm
 
     def _question_style(self, question: dict) -> dict:
-        overrides = {k: v for k, v in question.items() if k not in _QUESTION_STRUCTURAL_KEYS}
+        overrides = {k: v for k, v in question.items() if k not in QUESTION_STRUCTURAL_KEYS}
         return {**self.defaults, **overrides}
 
     def compute_field_coordinates(self):
@@ -35,23 +34,36 @@ class FormParser:
                 })
 
             if question["type"] == "choice":
-                x = self.margin
                 diameter = style["bubble_diameter_mm"] * units.mm
                 options = {}
-                for option in question["options"]:
-                    options[option] = (
-                        x,
-                        y - diameter / 2,
-                        x + diameter,
-                        y + diameter / 2
-                    )
-                    x += style["option_spacing_mm"] * units.mm
+                if question.get("direction", "horizontal") == "vertical":
+                    for option in question["options"]:
+                        options[option] = (
+                            self.margin,
+                            y - diameter / 2,
+                            self.margin + diameter,
+                            y + diameter / 2
+                        )
+                        y -= style["option_spacing_mm"] * units.mm
+                    y -= style["row_spacing_mm"] * units.mm
+                else:
+                    x = self.margin
+                    for option in question["options"]:
+                        options[option] = (
+                            x,
+                            y - diameter / 2,
+                            x + diameter,
+                            y + diameter / 2
+                        )
+                        x += style["option_spacing_mm"] * units.mm
+                    y -= style["row_spacing_mm"] * units.mm * 2
 
                 fields.append({
                     "id": question["id"],
                     "type": "bubbles",
                     "options": options
                 })
+                continue
 
             y -= style["row_spacing_mm"] * units.mm * 2
 

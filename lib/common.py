@@ -21,3 +21,5 @@ PAGE_SIZES = {
 }
 
 ARUCO_DICT = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
+
+QUESTION_STRUCTURAL_KEYS = {"type", "id", "label", "options", "direction"}
