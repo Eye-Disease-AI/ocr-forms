@@ -1,5 +1,5 @@
 {
   "upscaling_scale": 3,
   "bubble_pixel_threshold": 150,
-  "bubble_fill_threshold": 0.25
+  "bubble_fill_threshold": 0.5
 }
