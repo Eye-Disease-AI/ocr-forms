@@ -6,7 +6,7 @@ import cv2
 
 
 MARKER_DEFAULTS = {"size_mm": 15, "pad_mm": 5}
-DATES_DEFAULTS = {"width": 60, "height": 8}
+TEXT_BOX_DEFAULTS = {"width": 60, "height": 8}
 PAGE_SIZES = {
     "A4": pagesizes.A4
 }

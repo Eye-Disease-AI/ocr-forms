@@ -4,11 +4,12 @@ class FormParser:
     def __init__(self, config: dict):
         self.cfg = config
         self.marker_config = {**MARKER_DEFAULTS, **config.get("markers", {})}
-        self.dates_config = {**DATES_DEFAULTS, **config.get("dates", {})}
+        self.text_box_config = {**TEXT_BOX_DEFAULTS, **config.get("text_box", {})}
         self.width, self.height = PAGE_SIZES[config["page"]["size"]]
 
         self.margin = config["page"]["margin_mm"] * units.mm
         self.row_spacing = config["layout"]["row_spacing_mm"] * units.mm
+        self.label_spacing = config["layout"]["label_spacing_mm"] * units.mm
         self.bubble_diameter = config["layout"]["bubble_diameter_mm"] * units.mm
         self.option_spacing = config["layout"]["option_spacing_mm"] * units.mm
 
@@ -19,17 +20,18 @@ class FormParser:
         fields = []
         y = self.height - self.margin
         for q in self.cfg["questions"]:
-            y -= self.row_spacing
+            y -= self.label_spacing
 
-            if q["type"] == "date":
+            if q["type"] in ("text", "date", "number"):
                 fields.append({
                     "id": q["id"],
-                    "type": "ocr",
+                    "type": "text",
+                    "parse": q["type"],
                     "bbox": (
                         self.margin,
                         y,
-                        self.margin + self.dates_config["width"]*units.mm,
-                        y + self.dates_config["height"]*units.mm
+                        self.margin + self.text_box_config["width"]*units.mm,
+                        y + self.text_box_config["height"]*units.mm
                     )
                 })
 
@@ -48,27 +50,6 @@ class FormParser:
                 fields.append({
                     "id": q["id"],
                     "type": "omr",
-                    "question_type": "choice",
-                    "options": options
-                })
-
-            if q["type"] == "scale":
-                start,end = q["range"]
-                x = self.margin
-                options = {}
-                for v in range(start,end+1):
-                    options[str(v)] = (
-                        x,
-                        y - self.bubble_diameter / 2,
-                        x + self.bubble_diameter,
-                        y + self.bubble_diameter / 2
-                    )
-                    x += self.option_spacing
-
-                fields.append({
-                    "id": q["id"],
-                    "type": "omr",
-                    "question_type": "scale",
                     "options": options
                 })
 

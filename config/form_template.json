@@ -1,18 +1,19 @@
 {
   "page": {
     "size": "A4",
-    "margin_mm": 20
+    "margin_mm": 25
   },
   "markers": {
     "size_mm": 15,
     "pad_mm": 5
   },
-  "date": {
+  "text_box": {
     "width": 60,
     "height": 8
   },
   "layout": {
-    "row_spacing_mm": 12,
+    "row_spacing_mm": 6,
+    "label_spacing_mm": 12,
     "bubble_diameter_mm": 6,
     "option_spacing_mm": 12
   },
@@ -23,6 +24,16 @@
       "label": "Date"
     },
     {
+      "type": "text",
+      "id": "name",
+      "label": "Name"
+    },
+    {
+      "type": "number",
+      "id": "age",
+      "label": "Age"
+    },
+    {
       "type": "choice",
       "id": "q1",
       "label": "Question 1",
@@ -30,15 +41,9 @@
     },
     {
       "type": "choice",
-      "id": "q2",
-      "label": "Question 2",
-      "options": ["A", "B", "C", "D"]
-    },
-    {
-      "type": "scale",
       "id": "satisfaction",
       "label": "Satisfaction",
-      "range": [1, 10]
+      "options": ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]
     }
   ]
 }

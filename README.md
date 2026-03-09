@@ -56,12 +56,14 @@ Output is printed to stdout:
 
 ```json
 {
-  "date": "2026-03-08",
-  "q1": "B",
-  "q2": null,
-  "satisfaction": "7"
+  "date": "8.03.2026",
+  "q1": ["B"],
+  "q2": [],
+  "satisfaction": ["7"]
 }
 ```
+
+Text fields return the raw OCR string. Choice fields return a list of selected option labels (empty list if nothing marked).
 
 A `debug/<image_stem>/` directory is created with:
 - `warped.png` - perspective-corrected scan
@@ -92,9 +94,9 @@ Results are saved to `results.json`:
 
 ```json
 {
-  "form1": { "date": "2026-03-08", "q1": "B", ... },
-  "form2_p1": { ... },
-  "form2_p2": { ... }
+  "form1.png": { "date": "8.03.2026", "q1": ["B"], ... },
+  "form2.pdf_page1": { ... },
+  "form2.pdf_page2": { ... }
 }
 ```
 
@@ -106,57 +108,44 @@ Results are saved to `results.json`:
 
 ```json
 {
-  "page": {
-    "size": "A4",
-    "margin_mm": 20
-  },
-  "markers": {
-    "size_mm": 15,
-    "pad_mm": 5
-  },
-  "layout": {
-    "row_spacing_mm": 12,
-    "bubble_diameter_mm": 6,
-    "option_spacing_mm": 12
-  },
+  "page": { "size": "A4", "margin_mm": 20 },
+  "markers": { "size_mm": 15, "pad_mm": 5 },
+  "text_box": { "width": 60, "height": 8 },
+  "layout": { "row_spacing_mm": 12, "bubble_diameter_mm": 6, "option_spacing_mm": 12 },
   "questions": [
-    { "type": "date",   "id": "date", "label": "Date" },
+    { "type": "text",   "id": "date", "label": "Date" },
     { "type": "choice", "id": "q1",   "label": "Question 1", "options": ["A", "B", "C", "D"] },
-    { "type": "scale",  "id": "sat",  "label": "Satisfaction", "range": [1, 10] }
+    { "type": "choice", "id": "sat",  "label": "Satisfaction", "options": ["1","2","3","4","5","6","7","8","9","10"] }
   ]
 }
 ```
 
 **Question types:**
-- `date` - handwritten date field (OCR), expected format: `d.mm.yyyy` or `dd.mm.yyyy`
-- `choice` - multiple-choice bubbles (OMR), specify `"options"` list
-- `scale` - numeric range bubbles (OMR), specify `"range": [start, end]`
+- `text` — freehand text box; returns raw OCR string
+- `date` — text box; OCR output parsed to ISO date (`yyyy-mm-dd`), falls back to raw string on failure
+- `number` — text box; OCR output parsed to `int` or `float`, returns `null` on failure
+- `choice` — bubble selection (OMR); specify `"options": [...]`; returns a list of selected labels
 
 ### `config/scan_config.json` - scanning parameters
 
 ```json
 {
-  "scale": 3,
+  "upscaling_scale": 3,
   "omr_pixel_threshold": 150,
-  "omr_fill_threshold": 0.25,
-  "omr_fill_threshold_choice": 0.5
+  "omr_fill_threshold": 0.25
 }
 ```
 
 | Parameter | Description |
 |---|---|
-| `scale` | Output pixels per ReportLab point (~216 DPI at 3) |
-| `omr_pixel_threshold` | Grayscale cutoff for counting dark pixels (0-255) |
-| `omr_fill_threshold` | Minimum fill ratio to count a bubble as marked (scale questions) |
-| `omr_fill_threshold_choice` | Minimum fill ratio for choice questions (higher = stricter) |
+| `upscaling_scale` | Output pixels per ReportLab point (~216 DPI at 3) |
+| `omr_pixel_threshold` | Grayscale cutoff for counting dark pixels (0–255) |
+| `omr_fill_threshold` | Minimum dark-pixel ratio to count a bubble as marked |
 
 ---
 
 ## How scanning works
 
-1. **Perspective correction** - four ArUco markers (DICT_4X4_50) printed at the
-   corners are detected and used to warp the image to the expected page dimensions.
-2. **OMR (bubbles)** - each bubble region is thresholded. The ratio of dark
-   pixels determines fill score. Results: list of selected answers.
-3. **OCR (dates)** - EasyOCR reads the handwritten date box. Digits are
-   extracted and parsed to ISO format (`yyyy-mm-dd`).
+1. **Perspective correction** — four ArUco markers (DICT_4X4_50) printed at the corners are detected and used to warp the image to the expected page dimensions.
+2. **OMR (choice fields)** — each bubble region is thresholded; the ratio of dark pixels determines fill score; all options above the threshold are returned as a list.
+3. **OCR (text fields)** — EasyOCR reads the handwritten box and returns the raw string. Any further interpretation (e.g. parsing a date) is left to the caller.

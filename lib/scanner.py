@@ -2,7 +2,6 @@ import easyocr
 import json
 import numpy as np
 import os
-import sys
 from datetime import date
 from lib.parser import FormParser
 from .common import *
@@ -61,7 +60,11 @@ def _omr_score(region: np.ndarray, pixel_threshold: int) -> float:
     return filled / th.size
 
 
-def _parse_date(txt):
+def _parse_text(txt: str) -> str:
+    return txt
+
+
+def _parse_date(txt: str) -> str:
     digits = ''.join(c for c in txt if c.isdigit())
     try:
         if len(digits) == 7:   # d mm yyyy
@@ -71,6 +74,23 @@ def _parse_date(txt):
     except ValueError:
         pass
     return txt
+
+
+def _parse_number(txt: str) -> int | float | None:
+    digits = ''.join(c for c in txt if c.isdigit() or c in '.,-')
+    normalized = digits.replace(',', '.')
+    try:
+        f = float(normalized)
+        return int(f) if f == int(f) else f
+    except ValueError:
+        return None
+
+
+_PARSERS = {
+    "text":   _parse_text,
+    "date":   _parse_date,
+    "number": _parse_number,
+}
 
 
 class FormScanner:
@@ -96,7 +116,7 @@ class FormScanner:
             if debug_logs_field_dir:
                 os.makedirs(debug_logs_field_dir, exist_ok=True)
 
-            if field["type"] == "ocr":
+            if field["type"] == "text":
                 roi = _cutout_bbox(warped, field["bbox"], self.page_height, self.scan_config["upscaling_scale"])
                 if debug_logs_field_dir:
                     cv2.imwrite(os.path.join(debug_logs_field_dir, "raw.png"), roi)
@@ -106,12 +126,12 @@ class FormScanner:
                     with open(os.path.join(debug_logs_field_dir, "raw_ocr.txt"), "w") as f:
                         f.write(raw_txt)
 
-                results[field["id"]] = _parse_date(raw_txt)
+                results[field["id"]] = {field["parse"]: _PARSERS[field["parse"]](raw_txt)}
 
                 if annotated_debug_image is not None:
                     x1, y1, x2, y2 = _bbox_to_coordinates(field["bbox"], self.page_height, self.scan_config["upscaling_scale"])
                     cv2.rectangle(annotated_debug_image, (x1, y1), (x2, y2), (255, 100, 0), 2)
-                    cv2.putText(annotated_debug_image, f"{field['id']}: {results[field['id']]}", (x1, y1 - 6),
+                    cv2.putText(annotated_debug_image, f"{field['id']}: {_PARSERS[field['parse']](raw_txt)}", (x1, y1 - 6),
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 100, 0), 1)
 
             if field["type"] == "omr":
@@ -128,7 +148,7 @@ class FormScanner:
 
                 selected = [opt for opt, s in scores.items() if s > self.scan_config["omr_fill_threshold"]]
             
-                results[field["id"]] = selected
+                results[field["id"]] = {"choice": selected}
 
                 if annotated_debug_image is not None:
                     for opt, box in field["options"].items():
