@@ -1,6 +1,6 @@
 import json
 import os
-from lib.engine import FormRenderer
+from lib.renderer import FormRenderer
 import sys
 
 TEMPLATE = sys.argv[1] if len(sys.argv)>2 else "config/form_template.json"
@@ -10,5 +10,6 @@ with open(TEMPLATE) as f:
     cfg = json.load(f)
 
 renderer = FormRenderer(cfg)
-renderer.render(OUTPUT)
-renderer.render_png(os.path.splitext(OUTPUT)[0] + ".png")
+renderer.render()
+renderer.save_pdf(OUTPUT)
+renderer.save_png(os.path.splitext(OUTPUT)[0] + ".png")
