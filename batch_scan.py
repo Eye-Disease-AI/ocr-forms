@@ -1,55 +1,56 @@
-import cv2
+#!/usr/bin/env python
 import json
 import numpy as np
-import os
-import sys
-from pdf2image import convert_from_path
-from lib.scanner import FormScanner
-
-TEMPLATE  = sys.argv[1] if len(sys.argv) > 1 else "config/form_template.json"
-SCAN_CFG  = sys.argv[2] if len(sys.argv) > 2 else "config/scan_config.json"
-SCANS_DIR = sys.argv[3] if len(sys.argv) > 3 else "scans"
-OUTPUT    = sys.argv[4] if len(sys.argv) > 4 else "results.json"
+from pathlib import Path
+import typer
 
 IMAGE_EXTS = {'.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.tif'}
 PDF_EXTS   = {'.pdf'}
 
-with open(TEMPLATE) as f:
-    cfg = json.load(f)
+def main(
+    template: Path = typer.Option(Path("config/form_template.json"), help="Form template JSON"),
+    scan_config: Path = typer.Option(Path("config/scan_config.json"), help="Scan config JSON"),
+    scans_dir: Path = typer.Option(Path("scans"), help="Directory containing scanned forms"),
+    output: Path = typer.Option(Path("results.json"), help="Output JSON file"),
+):
+    import cv2
+    from pdf2image import convert_from_path
+    from lib.scanner import FormScanner
 
-with open(SCAN_CFG) as f:
-    scan_cfg = json.load(f)
+    with open(template) as f:
+        cfg = json.load(f)
+    with open(scan_config) as f:
+        scan_cfg = json.load(f)
 
-scanner = FormScanner(cfg, scan_cfg)
-all_results = {}
+    scanner = FormScanner(cfg, scan_cfg)
+    all_results = {}
 
-for filename in sorted(os.listdir(SCANS_DIR)):
-    stem, ext = os.path.splitext(filename)
-    path = os.path.join(SCANS_DIR, filename)
+    for path in sorted(scans_dir.iterdir()):
+        ext = path.suffix.lower()
 
-    if ext in IMAGE_EXTS:
-        img = cv2.imread(path)
-        frames = [img]
-        keys = [filename]
+        if ext in IMAGE_EXTS:
+            frames = [cv2.imread(str(path))]
+            keys = [path.name]
+        elif ext in PDF_EXTS:
+            pages = convert_from_path(str(path))
+            frames = [np.array(p) for p in pages]
+            keys = [f"{path.name}_page{i+1}" if len(pages) > 1 else path.name for i in range(len(pages))]
+        else:
+            continue
 
-    elif ext in PDF_EXTS:
-        pages = convert_from_path(path)
-        frames = [np.array(p) for p in pages]
-        keys = [f"{filename}_page{i+1}" if len(pages) > 1 else filename for i in range(len(pages))]
+        for key, img in zip(keys, frames):
+            typer.echo(f"Scanning {key} ...", err=True)
+            debug_dir = Path("debug") / key
+            debug_dir.mkdir(parents=True, exist_ok=True)
+            try:
+                all_results[key] = scanner.scan(img, debug_logs_dir=str(debug_dir))
+            except Exception as e:
+                typer.echo(f"Failure scanning {key}: {e}", err=True)
 
-    else:
-        continue
+    with open(output, "w") as f:
+        json.dump(all_results, f, indent=2)
 
-    for key, img in zip(keys, frames):
-        print(f"Scanning {key} ...", file=sys.stderr)
-        debug_dir = os.path.join("debug", key)
-        os.makedirs(debug_dir, exist_ok=True)
-        try:
-            all_results[key] = scanner.scan(img, debug_logs_dir=debug_dir)
-        except Exception as e:
-            print(f"Failure scanning {key}: {e}")
+    typer.echo(f"Processed {len(all_results)} form(s) → {output}")
 
-with open(OUTPUT, "w") as f:
-    json.dump(all_results, f, indent=2)
-
-print(f"Processed {len(all_results)} form(s) - {OUTPUT}")
+if __name__ == "__main__":
+    typer.run(main)

@@ -1,28 +1,31 @@
-import cv2
+#!/usr/bin/env python
 import json
-import os
-import sys
-from lib.scanner import FormScanner
+from pathlib import Path
+import typer
 
-TEMPLATE  = sys.argv[2] if len(sys.argv) > 2 else "config/form_template.json"
-SCAN_CFG  = sys.argv[3] if len(sys.argv) > 3 else "config/scan_config.json"
-IMAGE = sys.argv[1]
+def main(
+    image: Path = typer.Argument(help="Path to the scanned form image"),
+    template: Path = typer.Option(Path("config/form_template.json"), help="Form template JSON"),
+    scan_config: Path = typer.Option(Path("config/scan_config.json"), help="Scan config JSON"),
+):
+    import cv2
+    from lib.scanner import FormScanner
 
-with open(TEMPLATE) as f:
-    cfg = json.load(f)
+    with open(template) as f:
+        cfg = json.load(f)
+    with open(scan_config) as f:
+        scan_cfg = json.load(f)
 
-with open(SCAN_CFG) as f:
-    scan_cfg = json.load(f)
+    debug_dir = Path("debug") / image.stem
+    debug_dir.mkdir(parents=True, exist_ok=True)
 
-stem = os.path.splitext(os.path.basename(IMAGE))[0]
-debug_dir = os.path.join("debug", stem)
-os.makedirs(debug_dir, exist_ok=True)
+    img = cv2.imread(str(image))
+    try:
+        results = FormScanner(cfg, scan_cfg).scan(img, debug_logs_dir=str(debug_dir))
+        print(json.dumps(results, indent=2))
+    except Exception as e:
+        typer.echo(f"Failure scanning {image}: {e}", err=True)
+        raise typer.Exit(1)
 
-img = cv2.imread(IMAGE)
-try:
-    results = FormScanner(cfg, scan_cfg).scan(img, debug_logs_dir=debug_dir)
-    print(json.dumps(results, indent=2))
-except Exception as e:
-    print(f"Failure scanning {IMAGE}: {e}")
-    exit(1)
-
+if __name__ == "__main__":
+    typer.run(main)

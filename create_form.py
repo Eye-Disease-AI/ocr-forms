@@ -1,15 +1,22 @@
+#!/usr/bin/env python
 import json
-import os
-from lib.renderer import FormRenderer
-import sys
+from pathlib import Path
+import typer
 
-TEMPLATE = sys.argv[1] if len(sys.argv)>1 else "config/form_template.json"
-OUTPUT = sys.argv[2] if len(sys.argv)>2 else "config/form.pdf"
+def main(
+    template: Path = typer.Argument(help="Form template JSON"),
+    output: Path = typer.Argument(help="Output PDF path"),
+):
+    from lib.renderer import FormRenderer
 
-with open(TEMPLATE) as f:
-    cfg = json.load(f)
+    with open(template) as f:
+        cfg = json.load(f)
 
-renderer = FormRenderer(cfg)
-renderer.render()
-renderer.save_pdf(OUTPUT)
-renderer.save_png(os.path.splitext(OUTPUT)[0] + ".png")
+    renderer = FormRenderer(cfg)
+    renderer.render()
+    renderer.save_pdf(str(output))
+    renderer.save_png(str(output.with_suffix(".png")))
+    typer.echo(f"Saved {output}")
+
+if __name__ == "__main__":
+    typer.run(main)

@@ -1,4 +1,3 @@
-import easyocr
 import json
 import numpy as np
 import os
@@ -98,6 +97,7 @@ class FormScanner:
         self.parser = FormParser(form_config)
         self.layout = self.parser.compute_field_coordinates()
         self.page_width, self.page_height = self.parser.page_size()
+        import easyocr
         self._text_reader = easyocr.Reader(['en', 'pl'], gpu=False, verbose=False)
 
     def scan(self, image: np.ndarray, debug_logs_dir=None):
