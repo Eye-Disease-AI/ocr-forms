@@ -3,6 +3,14 @@
     "size": "A4",
     "margin_mm": 20
   },
+  "markers": {
+    "size_mm": 15,
+    "pad_mm": 5
+  },
+  "date": {
+    "width": 60,
+    "height": 8
+  },
   "layout": {
     "row_spacing_mm": 12,
     "bubble_diameter_mm": 6,

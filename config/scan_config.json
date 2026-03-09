@@ -1,0 +1,5 @@
+{
+  "upscaling_scale": 3,
+  "omr_pixel_threshold": 150,
+  "omr_fill_threshold": 0.25
+}
