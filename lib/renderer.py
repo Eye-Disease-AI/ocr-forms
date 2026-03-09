@@ -21,7 +21,7 @@ class FormRenderer:
         self.defaults = {**DEFAULTS, **form_config.get("defaults", {})}
         self.width, self.height = PAGE_SIZES[self.config["page"]["size"]]
         self.margin = self.config["page"]["margin_mm"] * units.mm
-        self.font, self.font_size = resolve_font(self.config["page"])
+        self.font, self.bold_font, self.font_size = resolve_font(self.config["page"])
 
         self.canvas = None
 
@@ -54,7 +54,9 @@ class FormRenderer:
 
         for question in self.config["questions"]:
             style = self._question_style(question)
+            canvas.setFont(self.bold_font, self.font_size)
             canvas.drawString(self.margin, y, question["label"])
+            canvas.setFont(self.font, self.font_size)
             y -= style["label_spacing_mm"] * units.mm
             if question["type"] in ("text", "date", "number"):
                 canvas.rect(self.margin, y,
@@ -63,11 +65,11 @@ class FormRenderer:
             if question["type"] == "choice":
                 radius = style["bubble_diameter_mm"] * units.mm / 2
                 if question.get("direction", "horizontal") == "vertical":
-                    for option in question["options"]:
+                    for i, option in enumerate(question["options"]):
                         canvas.circle(self.margin + radius, y, radius)
                         canvas.drawString(self.margin + style["bubble_diameter_mm"] * units.mm + 2*units.mm, y-2, option)
-                        y -= style["option_spacing_mm"] * units.mm
-                    y -= style["row_spacing_mm"] * units.mm
+                        if i < len(question["options"]) - 1:
+                            y -= style["option_spacing_mm"] * units.mm
                 else:
                     x = self.margin
                     for option in question["options"]:
@@ -76,9 +78,10 @@ class FormRenderer:
                         x += horizontal_option_spacing(option, style["bubble_diameter_mm"] * units.mm,
                                                        style["option_spacing_mm"] * units.mm,
                                                        self.font, self.font_size)
-                    y -= style["row_spacing_mm"] * units.mm * 2
+                y -= radius  # align to bubble bottom edge before gap
+                y -= style["question_spacing_mm"] * units.mm
                 continue
-            y -= style["row_spacing_mm"] * units.mm * 2
+            y -= style["question_spacing_mm"] * units.mm
         canvas.save()
 
     def _draw_markers_on_canvas(self, canvas):
