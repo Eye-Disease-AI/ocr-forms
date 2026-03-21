@@ -1,5 +1,6 @@
 {
   "upscaling_scale": 3,
   "bubble_pixel_threshold": 150,
-  "bubble_fill_threshold": 0.5
+  "bubble_fill_threshold": 0.5,
+  "ocr_engine": "easyocr"
 }

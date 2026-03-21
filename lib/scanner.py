@@ -8,6 +8,7 @@ _SCAN_DEFAULTS = {
     "upscaling_scale": 3,
     "bubble_pixel_threshold": 150,
     "bubble_fill_threshold": 0.5,
+    "ocr_engine": "pytesseract",  # "pytesseract" | "easyocr"
 }
 
 
@@ -57,6 +58,32 @@ def _bubble_fill_score(region: np.ndarray, darkness_threshold: int) -> float:
     return filled / thresholded.size
 
 
+def _preprocess_char_region(region: np.ndarray) -> np.ndarray:
+    """Inset to remove box borders, upscale, binarize with adaptive threshold, add padding."""
+    inset = max(2, region.shape[0] // 10)
+    if region.shape[0] > inset * 2 and region.shape[1] > inset * 2:
+        region = region[inset:-inset, inset:-inset]
+    upscaled = cv2.resize(region, None, fx=4, fy=4, interpolation=cv2.INTER_CUBIC)
+    block = max(11, (upscaled.shape[0] // 4) | 1)  # must be odd
+    binary = cv2.adaptiveThreshold(upscaled, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                                   cv2.THRESH_BINARY, block, 10)
+    return cv2.copyMakeBorder(binary, 20, 20, 20, 20, cv2.BORDER_CONSTANT, value=255)
+
+
+def _ocr_char_pytesseract(region: np.ndarray) -> str:
+    import pytesseract
+    processed = _preprocess_char_region(region)
+    # PSM 8 = single word — more robust than PSM 10 (single char),
+    # returns empty string when unreadable instead of random garbage
+    text = pytesseract.image_to_string(processed, config='--psm 8 --oem 3').strip()
+    return text[0] if text else ""
+
+
+def _ocr_char_easyocr(region: np.ndarray, reader) -> str:
+    processed = _preprocess_char_region(region)
+    raw = ' '.join(reader.readtext(processed, detail=0)).strip()
+    return raw[0] if raw else ""
+
 
 class FormScanner:
     def __init__(self, form_config: dict, scan_config=None):
@@ -64,8 +91,17 @@ class FormScanner:
         self.parser = FormParser(form_config)
         self.layout = self.parser.compute_field_coordinates()
         self.page_width, self.page_height = self.parser.page_size()
-        import easyocr
-        self._text_reader = easyocr.Reader(['en', 'pl'], gpu=False, verbose=False)
+
+        if self.scan_config["ocr_engine"] == "easyocr":
+            import easyocr
+            self._easyocr_reader = easyocr.Reader(['en', 'pl'], gpu=False, verbose=False)
+        else:
+            self._easyocr_reader = None
+
+    def _ocr_char(self, region: np.ndarray) -> str:
+        if self.scan_config["ocr_engine"] == "easyocr":
+            return _ocr_char_easyocr(region, self._easyocr_reader)
+        return _ocr_char_pytesseract(region)
 
     def scan(self, image: np.ndarray, debug_logs_dir=None):
         grayscale = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -94,8 +130,7 @@ class FormScanner:
                         region = _cutout_bbox(warped, seg["bbox"], self.page_height, scale)
                         if debug_logs_field_dir:
                             cv2.imwrite(os.path.join(debug_logs_field_dir, f"char_{seg['index']}.png"), region)
-                        raw = ' '.join(self._text_reader.readtext(region, detail=0)).strip()
-                        char = raw[0] if raw else ""
+                        char = self._ocr_char(region)
                         parts.append(char)
                         char_results.append((seg, char))
 
