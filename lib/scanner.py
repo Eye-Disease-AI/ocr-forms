@@ -184,6 +184,6 @@ class FormScanner:
         if debug_logs_dir:
             cv2.imwrite(os.path.join(debug_logs_dir, "annotated.png"), annotated_debug_image)
             with open(os.path.join(debug_logs_dir, "results.json"), "w") as file:
-                json.dump(results, file, indent=2)
+                json.dump(results, file, indent=2, ensure_ascii=False)
 
         return results

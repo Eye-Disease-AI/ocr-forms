@@ -22,7 +22,7 @@ def main(
     img = cv2.imread(str(image))
     try:
         results = FormScanner(cfg, scan_cfg).scan(img, debug_logs_dir=str(debug_dir))
-        print(json.dumps(results, indent=2))
+        print(json.dumps(results, indent=2, ensure_ascii=False))
     except Exception as e:
         typer.echo(f"Failure scanning {image}: {e}", err=True)
         raise typer.Exit(1)
