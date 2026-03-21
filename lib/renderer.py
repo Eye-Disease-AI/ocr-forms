@@ -59,11 +59,20 @@ class FormRenderer:
             canvas.drawString(self.margin_x, y, question["label"])
             canvas.setFont(self.font, self.font_size)
             y -= style["label_spacing_mm"] * units.mm
-            if question["type"] in ("text", "date", "number"):
-                canvas.rect(self.margin_x, y,
-                            style["text_box_width_mm"] * units.mm,
-                            style["text_box_height_mm"] * units.mm)
-            if question["type"] == "choice":
+
+            if question["type"] == "text":
+                tokens = parse_format_string(question["format"])
+                box_size = style["char_box_size_mm"] * units.mm
+                x = self.margin_x
+                for token in tokens:
+                    if token["kind"] == "box":
+                        canvas.rect(x, y, box_size, box_size)
+                        x += box_size
+                    else:
+                        canvas.drawString(x, y + 2, token["char"])
+                        x += pdfmetrics.stringWidth(token["char"], self.font, self.font_size)
+
+            elif question["type"] == "choice":
                 radius = style["bubble_diameter_mm"] * units.mm / 2
                 if question.get("direction", "horizontal") == "vertical":
                     for i, option in enumerate(question["options"]):
@@ -82,6 +91,7 @@ class FormRenderer:
                 y -= radius  # align to bubble bottom edge before gap
                 y -= style["question_spacing_mm"] * units.mm
                 continue
+
             y -= style["question_spacing_mm"] * units.mm
         canvas.save()
 

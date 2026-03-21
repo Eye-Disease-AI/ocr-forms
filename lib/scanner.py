@@ -1,7 +1,6 @@
 import json
 import numpy as np
 import os
-from datetime import date
 from lib.parser import FormParser
 from .common import *
 
@@ -58,38 +57,6 @@ def _bubble_fill_score(region: np.ndarray, darkness_threshold: int) -> float:
     return filled / thresholded.size
 
 
-def _parse_text(text: str) -> str:
-    return text
-
-
-def _parse_date(text: str) -> str:
-    digits = ''.join(c for c in text if c.isdigit())
-    try:
-        if len(digits) == 7:   # d mm yyyy
-            return date(int(digits[3:7]), int(digits[1:3]), int(digits[0])).isoformat()
-        if len(digits) == 8:   # dd mm yyyy
-            return date(int(digits[4:8]), int(digits[2:4]), int(digits[0:2])).isoformat()
-    except ValueError:
-        pass
-    return text
-
-
-def _parse_number(text: str) -> int | float | None:
-    digits = ''.join(c for c in text if c.isdigit() or c in '.,-')
-    normalized = digits.replace(',', '.')
-    try:
-        value = float(normalized)
-        return int(value) if value == int(value) else value
-    except ValueError:
-        return None
-
-
-_PARSERS = {
-    "text":   _parse_text,
-    "date":   _parse_date,
-    "number": _parse_number,
-}
-
 
 class FormScanner:
     def __init__(self, form_config: dict, scan_config=None):
@@ -116,22 +83,41 @@ class FormScanner:
                 os.makedirs(debug_logs_field_dir, exist_ok=True)
 
             if field["type"] == "text":
-                region = _cutout_bbox(warped, field["bbox"], self.page_height, self.scan_config["upscaling_scale"])
-                if debug_logs_field_dir:
-                    cv2.imwrite(os.path.join(debug_logs_field_dir, "raw.png"), region)
+                scale = self.scan_config["upscaling_scale"]
+                parts = []
+                char_results = []  # (seg, detected_char)
+                for seg in field["segments"]:
+                    if seg["kind"] == "literal":
+                        parts.append(seg["char"])
+                        char_results.append((seg, seg["char"]))
+                    else:
+                        region = _cutout_bbox(warped, seg["bbox"], self.page_height, scale)
+                        if debug_logs_field_dir:
+                            cv2.imwrite(os.path.join(debug_logs_field_dir, f"char_{seg['index']}.png"), region)
+                        raw = ' '.join(self._text_reader.readtext(region, detail=0)).strip()
+                        char = raw[0] if raw else ""
+                        parts.append(char)
+                        char_results.append((seg, char))
 
-                raw_text = ' '.join(self._text_reader.readtext(region, detail=0)).strip()
-                if debug_logs_field_dir:
-                    with open(os.path.join(debug_logs_field_dir, "raw_text.txt"), "w") as file:
-                        file.write(raw_text)
+                assembled = "".join(parts)
+                results[field["id"]] = assembled
 
-                results[field["id"]] = {field["parse"]: _PARSERS[field["parse"]](raw_text)}
+                if debug_logs_field_dir:
+                    with open(os.path.join(debug_logs_field_dir, "assembled.txt"), "w") as f:
+                        f.write(assembled)
 
                 if annotated_debug_image is not None:
-                    x1, y1, x2, y2 = _bbox_to_coordinates(field["bbox"], self.page_height, self.scan_config["upscaling_scale"])
-                    cv2.rectangle(annotated_debug_image, (x1, y1), (x2, y2), (255, 100, 0), 2)
-                    cv2.putText(annotated_debug_image, f"{field['id']}: {_PARSERS[field['parse']](raw_text)}", (x1, y1 - 6),
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 100, 0), 1)
+                    for seg, char in char_results:
+                        if seg["kind"] == "box":
+                            x1, y1, x2, y2 = _bbox_to_coordinates(seg["bbox"], self.page_height, scale)
+                            cv2.rectangle(annotated_debug_image, (x1, y1), (x2, y2), (255, 100, 0), 2)
+                            cv2.putText(annotated_debug_image, char, (x1 + 2, y1 - 4),
+                                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 100, 0), 1)
+                    first_box_seg = next((s for s, _ in char_results if s["kind"] == "box"), None)
+                    if first_box_seg:
+                        x1, y1, _, _ = _bbox_to_coordinates(first_box_seg["bbox"], self.page_height, scale)
+                        cv2.putText(annotated_debug_image, f"{field['id']}: {assembled}", (x1, y1 - 16),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 100, 0), 1)
 
             if field["type"] == "bubbles":
                 scores = {}

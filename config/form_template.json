@@ -9,8 +9,7 @@
   "defaults": {
     "marker_size_mm": 15,
     "marker_pad_mm": 5,
-    "text_box_width_mm": 60,
-    "text_box_height_mm": 8,
+    "char_box_size_mm": 8,
     "question_spacing_mm": 12,
     "label_spacing_mm": 6,
     "bubble_diameter_mm": 6,
@@ -18,21 +17,22 @@
   },
   "questions": [
     {
-      "type": "date",
+      "type": "text",
       "id": "date",
-      "label": "Date"
+      "label": "Date",
+      "format": "[2]-[2]-[4]"
     },
     {
       "type": "text",
       "id": "name",
       "label": "Name",
-      "text_box_width_mm": 120
+      "format": "[15]"
     },
     {
-      "type": "number",
+      "type": "text",
       "id": "age",
       "label": "Age",
-      "text_box_width_mm": 30
+      "format": "[3]"
     },
     {
       "type": "choice",

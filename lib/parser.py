@@ -22,17 +22,28 @@ class FormParser:
             style = self._question_style(question)
             y -= style["label_spacing_mm"] * units.mm
 
-            if question["type"] in ("text", "date", "number"):
+            if question["type"] == "text":
+                tokens = parse_format_string(question["format"])
+                box_size = style["char_box_size_mm"] * units.mm
+                x = self.margin_x
+                segments = []
+                box_index = 0
+                for token in tokens:
+                    if token["kind"] == "box":
+                        segments.append({
+                            "kind": "box",
+                            "bbox": (x, y, x + box_size, y + box_size),
+                            "index": box_index,
+                        })
+                        box_index += 1
+                        x += box_size
+                    else:
+                        segments.append({"kind": "literal", "char": token["char"]})
+                        x += pdfmetrics.stringWidth(token["char"], self.font, self.font_size)
                 fields.append({
                     "id": question["id"],
                     "type": "text",
-                    "parse": question["type"],
-                    "bbox": (
-                        self.margin_x,
-                        y,
-                        self.margin_x + style["text_box_width_mm"] * units.mm,
-                        y + style["text_box_height_mm"] * units.mm
-                    )
+                    "segments": segments,
                 })
 
             if question["type"] == "choice":

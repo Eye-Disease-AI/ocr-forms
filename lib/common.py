@@ -11,8 +11,7 @@ import cv2
 DEFAULTS = {
     "marker_size_mm":       15,
     "marker_pad_mm":         5,
-    "text_box_width_mm":    60,
-    "text_box_height_mm":    8,
+    "char_box_size_mm":      8,
     "question_spacing_mm":  12,
     "label_spacing_mm":      6,
     "bubble_diameter_mm":    6,
@@ -25,7 +24,28 @@ PAGE_SIZES = {
 
 ARUCO_DICT = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
 
-QUESTION_STRUCTURAL_KEYS = {"type", "id", "label", "options", "direction"}
+QUESTION_STRUCTURAL_KEYS = {"type", "id", "label", "options", "direction", "format"}
+
+
+def parse_format_string(fmt: str) -> list[dict]:
+    """Parse format string like '[2]-[2]-[4]' into box/literal tokens.
+
+    [N] expands to N consecutive input boxes. Any other character is a literal.
+    Example: '[2]-[2]-[4]' -> box, box, literal('-'), box, box, literal('-'), box x4
+    """
+    import re
+    tokens = []
+    i = 0
+    while i < len(fmt):
+        m = re.match(r'\[(\d+)\]', fmt[i:])
+        if m:
+            count = int(m.group(1))
+            tokens.extend([{"kind": "box"}] * count)
+            i += m.end()
+        else:
+            tokens.append({"kind": "literal", "char": fmt[i]})
+            i += 1
+    return tokens
 
 
 def resolve_font(page_config: dict) -> tuple[str, str, int]:
