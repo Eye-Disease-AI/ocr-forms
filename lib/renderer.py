@@ -56,9 +56,10 @@ class FormRenderer:
         for question in self.config["questions"]:
             style = self._question_style(question)
             canvas.setFont(self.bold_font, self.font_size)
-            canvas.drawString(self.margin_x, y, question["label"])
+            for line in question["label"].splitlines():
+                canvas.drawString(self.margin_x, y, line)
+                y -= style["label_spacing_mm"] * units.mm
             canvas.setFont(self.font, self.font_size)
-            y -= style["label_spacing_mm"] * units.mm
 
             if question["type"] == "text":
                 tokens = parse_format_string(question["format"])

@@ -20,7 +20,8 @@ class FormParser:
         y = self.height - self.margin_y
         for question in self.config["questions"]:
             style = self._question_style(question)
-            y -= style["label_spacing_mm"] * units.mm
+            for _ in question["label"].splitlines():               
+                y -= style["label_spacing_mm"] * units.mm
 
             if question["type"] == "text":
                 tokens = parse_format_string(question["format"])
