@@ -18,6 +18,12 @@
   "questions": [
     {
       "type": "text",
+      "id": "title",
+      "label": "Kwestionariusz do badania.",
+      "format": ""
+    },
+    {
+      "type": "text",
       "label_spacing_mm": 12,
       "id": "exam_date",
       "label": "Data badania",
@@ -26,74 +32,58 @@
     {
       "type": "text",
       "label_spacing_mm": 12,
-      "id": "patient_id",
-      "label": "ID (wypełnia lekarz)",
-      "format": "[8]"
+      "id": "initials",
+      "label": "Inicjały (pierwsza litera imienia, pierwsza imienia nazwiska)",
+      "format": "[1]    [1]"
     },
     {
       "type": "text",
       "label_spacing_mm": 12,
-      "id": "birth_date",
-      "label": "Data urodzenia",
-      "format": "[2]-[2]-[4]"
+      "id": "birth_year",
+      "label": "Rok urodzenia",
+      "format": "[4]"
     },
     {
       "type": "choice",
       "id": "sex",
       "label": "Płeć",
+      "direction": "vertical",
       "options": ["Kobieta", "Mężczyzna"]
     },
     {
       "type": "choice",
-      "id": "iris_color",
-      "label": "Kolor tęczówki",
-      "options": ["Jasna (niebieska/szara)", "Ciemna (brązowa)", "Inna/Niepewne"]
-    },
-    {
-      "type": "choice",
       "id": "diabetes",
-      "label": "Czy pacjent choruje na cukrzycę?",
-      "options": ["Tak", "Nie", "Nie wiem"]
-    },
-    {
-      "type": "choice",
-      "id": "autoimmune_disease",
-      "label": "Czy pacjent ma choroby autoimmunologiczne?",
-      "options": ["Tak", "Nie", "Nie wiem"]
+      "label": "Na które z tych chorób wiesz, że chorujesz?",
+      "direction": "vertical",
+      "options": ["Cukrzyca", "Choroby autoimmunologiczne"]
     },
     {
       "type": "choice",
       "id": "contact_lenses",
-      "label": "Czy pacjent używa soczewek kontaktowych?",
+      "label": "Czy używasz soczewek kontaktowych?",
+      "direction": "vertical",
       "options": ["Nigdy", "W przeszłości", "Obecnie"]
     },
     {
       "type": "choice",
       "id": "eye_surgery_or_trauma",
-      "label": "Czy przebyto operacje oka lub fizyczne urazy oka",
+      "label": "Czy doświadczyłeś/aś operacji oka lub fizycznych urazów oka?",
+      "direction": "vertical",
       "options": ["Tak, mniej niż miesiąc temu", "Tak, ponad miesiąc temu", "Nie"]
     },
     {
       "type": "choice",
-      "id": "sudden_vision_loss",
-      "label": "Kiedy pojawiły się objawy",
-      "direction": "vertical",
-      "options": ["Brak", "Ostatnie 24 godziny", "W ostatnim tygodniu", "Dłużej niż tydzień"]
-    },
-    {
-      "type": "choice",
       "id": "symptoms",
-      "label": "Odczuwane objawy",
+      "label": "Które z tych objawów odczuwasz?",
       "direction": "vertical",
       "options": ["Światłowstręt", "\"Plamka\" w polu widzenia", "Pogorszenie ostrości wzroku", "Zaczerwienienie oka", "Ból oka"]
     },
     {
       "type": "choice",
-      "id": "eye_pain_scale",
-      "label": "Ból oka (0 - brak, 10 - najgorszy ból)",
-      "options": ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"],
-      "bubble_diameter_mm": 5,
-      "option_spacing_mm": 11
+      "id": "sudden_vision_loss",
+      "label": "Kiedy pojawiły się objawy?",
+      "direction": "vertical",
+      "options": ["Brak", "Ostatnie 24 godziny", "W ostatnim tygodniu", "Dłużej niż tydzień"]
     }
   ]
 }
