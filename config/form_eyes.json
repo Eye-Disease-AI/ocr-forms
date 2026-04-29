@@ -19,8 +19,9 @@
     {
       "type": "text",
       "id": "title",
-      "label": "Kwestionariusz do badania.",
-      "format": ""
+      "label": "Kwestionariusz do badania.\nZaznaczać w całości: ⬤ - tak, ◯ - nie.",
+      "format": "",
+      "question_spacing_mm": 5
     },
     {
       "type": "text",
