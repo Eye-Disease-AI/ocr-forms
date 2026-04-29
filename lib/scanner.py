@@ -3,6 +3,7 @@ import numpy as np
 import os
 from lib.parser import FormParser
 from .common import *
+import cv2
 
 _SCAN_DEFAULTS = {
     "upscaling_scale": 3,
@@ -11,10 +12,35 @@ _SCAN_DEFAULTS = {
     "ocr_engine": "pytesseract",  # "pytesseract" | "easyocr"
 }
 
+def _prepare_aruco() -> cv2.aruco.ArucoDetector:
+    aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
+
+    params = cv2.aruco.DetectorParameters()
+
+    # Adaptive threshold sweep, try multiple window sizes
+    params.adaptiveThreshWinSizeMin = 3
+    params.adaptiveThreshWinSizeMax = 23
+    params.adaptiveThreshWinSizeStep = 4
+
+    # More lenient quad fitting for ragged toner edges
+    params.polygonalApproxAccuracyRate = 0.05
+    params.minMarkerPerimeterRate = 0.02
+
+    # Bit extraction, the big wins for noisy laser prints
+    params.perspectiveRemovePixelPerCell = 8
+    params.perspectiveRemoveIgnoredMarginPerCell = 0.33
+    params.maxErroneousBitsInBorderRate = 0.5
+    params.errorCorrectionRate = 1.0
+
+    # Robust corner refinement
+    params.cornerRefinementMethod = cv2.aruco.CORNER_REFINE_APRILTAG
+
+    return cv2.aruco.ArucoDetector(aruco_dict, params)
+
 
 def _warp_image(image: np.ndarray, parser: FormParser, page_width, page_height, upscaling_scale) -> np.ndarray:
-    aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
-    detector = cv2.aruco.ArucoDetector(aruco_dict, cv2.aruco.DetectorParameters())
+    detector = _prepare_aruco()
+    image = cv2.resize(image, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
     corners, ids, _ = detector.detectMarkers(image)
 
     width_pixels = int(page_width * upscaling_scale)
@@ -105,6 +131,13 @@ class FormScanner:
 
     def scan(self, image: np.ndarray, debug_logs_dir=None):
         grayscale = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        #grayscale = cv2.convertScaleAbs(grayscale, alpha=2.0, beta=0)
+        #grayscale = cv2.morphologyEx(grayscale, cv2.MORPH_CLOSE, np.ones((3, 3), np.uint8))
+        grayscale = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8)).apply(grayscale)
+
+        if debug_logs_dir:
+            cv2.imwrite(os.path.join(debug_logs_dir, "grayscale.png"), grayscale)
+
         warped = _warp_image(grayscale, self.parser, self.page_width, self.page_height, self.scan_config["upscaling_scale"])
 
         if debug_logs_dir:
