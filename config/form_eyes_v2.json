@@ -10,7 +10,7 @@
     "marker_size_mm": 15,
     "marker_pad_mm": 5,
     "char_box_size_mm": 8,
-    "question_spacing_mm": 8,
+    "question_spacing_mm": 6,
     "label_spacing_mm": 6,
     "bubble_diameter_mm": 6,
     "option_spacing_mm": 8
@@ -19,8 +19,9 @@
     {
       "type": "text",
       "id": "title",
-      "label": "Kwestionariusz do badania.",
-      "format": ""
+      "label": "Kwestionariusz do badania.\nZaznaczać w całości: ⬤ - tak, ◯ - nie.",
+      "format": "",
+      "question_spacing_mm": 5
     },
     {
       "type": "text",
