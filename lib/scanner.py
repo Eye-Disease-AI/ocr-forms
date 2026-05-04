@@ -48,6 +48,7 @@ def _warp_image(image: np.ndarray, parser: FormParser, page_width, page_height, 
     if debug_logs_field_dir is not None:
         markers_dir = os.path.join(debug_logs_field_dir, "markers")
         os.makedirs(markers_dir, exist_ok=True)
+    best_scale_centers = {}
     for ds in [1, 2, 4, 8, 10, 12]:
         target_h = int(image.shape[0] / ds)
         downsampled = cv2.resize(image, (int(image.shape[1]/ds), target_h), interpolation=cv2.INTER_AREA)
@@ -58,17 +59,17 @@ def _warp_image(image: np.ndarray, parser: FormParser, page_width, page_height, 
             cv2.aruco.drawDetectedMarkers(markers_debug, corners, ids)
             cv2.aruco.drawDetectedMarkers(markers_debug, rejected, borderColor=(0,0,255))
             cv2.imwrite(os.path.join(markers_dir, f"scale={ds}.png"), markers_debug)
-
+        scale_centers = {} 
         if ids is not None:
-            for i, mid in enumerate(ids.flatten()):
-                mid = int(mid)
-                if mid not in expected_centers:
-                    continue
-                if mid not in detected_centers:
-                    detected_centers[mid] = corners[i][0].mean(axis=0) * ds
-        if len(detected_centers) >= 4:
-            break   # that's enough
-
+            for i, mid in enumerate(ids.flatten()):                                                                                   
+                mid = int(mid)                         
+                if mid in expected_centers:
+                    scale_centers[mid] = corners[i][0].mean(axis=0) * ds
+        if len(scale_centers) > len(best_scale_centers):                                                                              
+            best_scale_centers = scale_centers
+        if len(best_scale_centers) >= 4:                                                                                              
+            break  
+    detected_centers = best_scale_centers
 
     if len(detected_centers) < 4:
         raise Exception(f"Error: only {len(detected_centers)}/4 markers detected.")
@@ -83,7 +84,7 @@ def _warp_image(image: np.ndarray, parser: FormParser, page_width, page_height, 
 
     transform = cv2.getPerspectiveTransform(source_points[:4], destination_points[:4])
     warped = cv2.warpPerspective(image, transform, (width_pixels, height_pixels))
-    return warped
+    return warped, expected_centers
 
 
 def _bbox_to_coordinates(bbox, page_height_points, scale):
@@ -161,12 +162,18 @@ class FormScanner:
         if debug_logs_dir:
             cv2.imwrite(os.path.join(debug_logs_dir, "grayscale.png"), grayscale)
 
-        warped = _warp_image(grayscale, self.parser, self.page_width, self.page_height, self.scan_config["upscaling_scale"], debug_logs_dir)
+        warped, marker_centers = _warp_image(grayscale, self.parser, self.page_width, self.page_height, self.scan_config["upscaling_scale"], debug_logs_dir)
 
         if debug_logs_dir:
             cv2.imwrite(os.path.join(debug_logs_dir, "warped.png"), warped)
 
         annotated_debug_image: np.ndarray = cv2.cvtColor(warped, cv2.COLOR_GRAY2BGR) if debug_logs_dir else None
+        if annotated_debug_image is not None:
+            for mid, (mx, my) in marker_centers.items():
+                pt = (int(mx), int(my))
+                cv2.circle(annotated_debug_image, pt, 12, (0, 0, 255), 3)
+                cv2.putText(annotated_debug_image, str(mid), (pt[0] + 15, pt[1] + 5),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
         results = {}
 
         for field in self.layout:
