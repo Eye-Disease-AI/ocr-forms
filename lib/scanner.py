@@ -40,18 +40,19 @@ def _prepare_aruco() -> cv2.aruco.ArucoDetector:
 
 def _warp_image(image: np.ndarray, parser: FormParser, page_width, page_height, upscaling_scale, debug_logs_field_dir) -> np.ndarray:
     detector = _prepare_aruco()
-    image = cv2.morphologyEx(image, cv2.MORPH_CLOSE, np.ones((5,5), np.uint8))
-
+    clahed = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8)).apply(image)
+    _, clahed = cv2.threshold(clahed,127, 255,cv2.THRESH_TOZERO)
+    clahed = cv2.morphologyEx(clahed, cv2.MORPH_OPEN, np.ones((9,9), np.uint8))
     detected_centers = {}
     expected_centers = parser.marker_coordinates(upscaling_scale)
     
     if debug_logs_field_dir is not None:
         markers_dir = os.path.join(debug_logs_field_dir, "markers")
         os.makedirs(markers_dir, exist_ok=True)
-    best_scale_centers = {}
-    for ds in [1, 2, 4, 8, 10, 12]:
-        target_h = int(image.shape[0] / ds)
-        downsampled = cv2.resize(image, (int(image.shape[1]/ds), target_h), interpolation=cv2.INTER_AREA)
+    all_scale_results = []
+    for ds in [1, 2, 4, 8, 10, 12, 14, 16, 18, 20]:
+        target_h = int(clahed.shape[0] / ds)
+        downsampled = cv2.resize(clahed, (int(clahed.shape[1]/ds), target_h), interpolation=cv2.INTER_AREA)
         corners, ids, rejected = detector.detectMarkers(downsampled)
 
         if debug_logs_field_dir is not None:
@@ -59,17 +60,27 @@ def _warp_image(image: np.ndarray, parser: FormParser, page_width, page_height, 
             cv2.aruco.drawDetectedMarkers(markers_debug, corners, ids)
             cv2.aruco.drawDetectedMarkers(markers_debug, rejected, borderColor=(0,0,255))
             cv2.imwrite(os.path.join(markers_dir, f"scale={ds}.png"), markers_debug)
-        scale_centers = {} 
+        scale_centers = {}
         if ids is not None:
-            for i, mid in enumerate(ids.flatten()):                                                                                   
-                mid = int(mid)                         
-                if mid in expected_centers:
-                    scale_centers[mid] = corners[i][0].mean(axis=0) * ds
-        if len(scale_centers) > len(best_scale_centers):                                                                              
-            best_scale_centers = scale_centers
-        if len(best_scale_centers) >= 4:                                                                                              
-            break  
-    detected_centers = best_scale_centers
+            ids = [id for id in ids.flatten() if id in expected_centers]
+            for i, mid in enumerate(ids):
+                mid = int(mid)
+                scale_centers[mid] = corners[i][0].mean(axis=0) * ds
+            all_scale_results.append(scale_centers)
+            if len(ids) == 4:
+                break
+
+    # Pick the scale with the most detections as the base
+    all_scale_results.sort(key=len, reverse=True)
+    if not len(all_scale_results) > 0:
+        raise Exception("Error: no markers detected")
+
+    detected_centers = dict(all_scale_results[0])
+    # Fill in any missing markers from other scales
+    for scale_centers in all_scale_results[1:]:
+        for mid, center in scale_centers.items():
+            if mid not in detected_centers:
+                detected_centers[mid] = center
 
     if len(detected_centers) < 4:
         raise Exception(f"Error: only {len(detected_centers)}/4 markers detected.")
@@ -110,6 +121,7 @@ def _bubble_fill_score(region: np.ndarray, darkness_threshold: int) -> float:
 
 def _preprocess_char_region(region: np.ndarray) -> np.ndarray:
     """Inset to remove box borders, upscale, binarize with adaptive threshold, add padding."""
+    region = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8)).apply(region)
     inset = max(2, region.shape[0] // 10)
     if region.shape[0] > inset * 2 and region.shape[1] > inset * 2:
         region = region[inset:-inset, inset:-inset]
@@ -155,10 +167,6 @@ class FormScanner:
 
     def scan(self, image: np.ndarray, debug_logs_dir=None):
         grayscale = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        #grayscale = cv2.convertScaleAbs(grayscale, alpha=2.0, beta=0)
-        #grayscale = cv2.morphologyEx(grayscale, cv2.MORPH_CLOSE, np.ones((3, 3), np.uint8))
-        grayscale = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8)).apply(grayscale)
-
         if debug_logs_dir:
             cv2.imwrite(os.path.join(debug_logs_dir, "grayscale.png"), grayscale)
 
