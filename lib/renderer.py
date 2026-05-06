@@ -74,19 +74,27 @@ class FormRenderer:
                         x += pdfmetrics.stringWidth(token["char"], self.font, self.font_size)
 
             elif question["type"] == "choice":
-                radius = style["bubble_diameter_mm"] * units.mm / 2
+                diameter = style["bubble_diameter_mm"] * units.mm
+                radius = diameter / 2
+                shape = style.get("bubble_shape", "circle")
                 if question.get("direction", "horizontal") == "vertical":
                     for i, option in enumerate(question["options"]):
-                        canvas.circle(self.margin_x + radius, y, radius)
-                        canvas.drawString(self.margin_x + style["bubble_diameter_mm"] * units.mm + 2*units.mm, y-2, option)
+                        if shape == "square":
+                            canvas.rect(self.margin_x, y - radius, diameter, diameter)
+                        else:
+                            canvas.circle(self.margin_x + radius, y, radius)
+                        canvas.drawString(self.margin_x + diameter + 2*units.mm, y-2, option)
                         if i < len(question["options"]) - 1:
                             y -= style["option_spacing_mm"] * units.mm
                 else:
                     x = self.margin_x
                     for option in question["options"]:
-                        canvas.circle(x + radius, y, radius)
-                        canvas.drawString(x + style["bubble_diameter_mm"] * units.mm + 2*units.mm, y-2, option)
-                        x += horizontal_option_spacing(option, style["bubble_diameter_mm"] * units.mm,
+                        if shape == "square":
+                            canvas.rect(x, y - radius, diameter, diameter)
+                        else:
+                            canvas.circle(x + radius, y, radius)
+                        canvas.drawString(x + diameter + 2*units.mm, y-2, option)
+                        x += horizontal_option_spacing(option, diameter,
                                                        style["option_spacing_mm"] * units.mm,
                                                        self.font, self.font_size)
                 y -= radius  # align to bubble bottom edge before gap
