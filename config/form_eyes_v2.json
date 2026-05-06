@@ -2,7 +2,7 @@
   "page": {
     "size": "A4",
     "margin_x_mm": 25,
-    "margin_y_mm": 20,
+    "margin_y_mm": 15,
     "font": "/usr/share/fonts/TTF/DejaVuSans.ttf",
     "font_size": 13
   },
@@ -12,14 +12,15 @@
     "char_box_size_mm": 8,
     "question_spacing_mm": 6,
     "label_spacing_mm": 6,
-    "bubble_diameter_mm": 6,
-    "option_spacing_mm": 8
+    "bubble_diameter_mm": 4,
+    "option_spacing_mm": 8,
+    "bubble_shape": "square"
   },
   "questions": [
     {
       "type": "text",
       "id": "title",
-      "label": "Kwestionariusz do badania.\nZaznaczać w całości: ⬤ - tak, ◯ - nie.",
+      "label": "Kwestionariusz do badania. Prosimy:\n▸ Zaznaczać w całości: ■ - tak, □ - nie.\n▸ Używać drukowanych liter",
       "format": "",
       "question_spacing_mm": 5
     },
@@ -27,7 +28,7 @@
       "type": "text",
       "label_spacing_mm": 12,
       "id": "exam_date",
-      "label": "Data badania",
+      "label": "Data badania (DD-MM-RRRR)",
       "format": "[2]-[2]-[4]"
     },
     {
